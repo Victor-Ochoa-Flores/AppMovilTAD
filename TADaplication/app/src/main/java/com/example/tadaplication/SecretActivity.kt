@@ -10,7 +10,7 @@ import androidx.appcompat.app.AlertDialog
 import com.example.tadaplication.databinding.ActivitySecretBinding
 import com.example.tadaplication.databinding.ActivityTwowaysBinding
 
-
+// aaaaaaaaaa
 class SecretActivity : AppCompatActivity() {
     private lateinit var btn_add : FloatingActionButton
     private val cameraPermission = android.Manifest.permission.CAMERA
