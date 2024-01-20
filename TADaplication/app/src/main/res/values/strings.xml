@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TADaplication</string>
+    <string name="authenticate">Authenticate</string>
+    <string name="add_button_description">Añadir</string>
+</resources>
