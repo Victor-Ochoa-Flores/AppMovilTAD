@@ -8,11 +8,10 @@ import android.content.DialogInterface
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import com.example.tadaplication.databinding.ActivitySecretBinding
-import com.example.tadaplication.databinding.ActivityTwowaysBinding
 
-// aaaaaaaaaa
+
 class SecretActivity : AppCompatActivity() {
-    private lateinit var btn_add : FloatingActionButton
+    //private lateinit var btn_add : FloatingActionButton
     private val cameraPermission = android.Manifest.permission.CAMERA
     private lateinit var binding: ActivitySecretBinding
     private var action = Action.QR_SCANNER
@@ -27,18 +26,13 @@ class SecretActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySecretBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        initComponentes()
         listenerAddUser()
     }
 
     private fun listenerAddUser(){
-        btn_add.setOnClickListener(){
+        binding.addButton.setOnClickListener(){
             showAddOptionsDialog()
         }
-    }
-
-    private fun initComponentes(){
-        btn_add  = findViewById<FloatingActionButton>(R.id.addButton)
     }
 
     private fun showAddOptionsDialog() {
@@ -55,7 +49,7 @@ class SecretActivity : AppCompatActivity() {
             .setAdapter(adapter) { _, which ->
                 when (which) {
                     0 -> {
-                        this.action = Action.QR_SCANNER
+                        this.action = Action.FACE_DETECTION
                         requestCameraAndStart()
                     }
                     1 -> {
@@ -84,7 +78,7 @@ class SecretActivity : AppCompatActivity() {
     private fun startCamera() {
         when (action) {
             Action.QR_SCANNER -> startScanner()
-            // Action.FACE_DETECTION -> FaceDetectionActivity.startActivity(this)
+            Action.FACE_DETECTION -> FaceDetectionActivity.startActivity(this)
             else -> {}
         }
     }
