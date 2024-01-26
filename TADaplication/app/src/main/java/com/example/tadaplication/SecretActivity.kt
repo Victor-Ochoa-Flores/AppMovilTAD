@@ -3,6 +3,7 @@ package com.example.tadaplication
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts.*
+import androidx.appcompat.app.AlertDialog
 import com.example.tadaplication.databinding.ActivitySecretBinding
 
 
@@ -24,15 +25,36 @@ class SecretActivity  : AppCompatActivity() {
         binding = ActivitySecretBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.buttonOpenScanner.setOnClickListener {
-            this.action = Action.QR_SCANNER
-            requestCameraAndStart()
+        binding.fabAdd.setOnClickListener {
+            showOptionsDialog()
         }
+    }
 
-        binding.buttonFaceDetect.setOnClickListener {
-            this.action = Action.FACE_DETECTION
-            requestCameraAndStart()
-        }
+    private fun showOptionsDialog() {
+        // Crea un diálogo con opciones
+        val options = arrayOf("Reconocimiento Facial", "Escanear QR")
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Selecciona una opción")
+            .setItems(options) { _, which ->
+                // Handle click on an option
+                when (which) {
+                    0 -> {
+                        this.action = Action.FACE_DETECTION
+                        requestCameraAndStart()
+                    }
+                    1 -> {
+                        this.action = Action.QR_SCANNER
+                        requestCameraAndStart()
+                    }
+                }
+            }
+            .setNegativeButton("Cancelar") { dialog, _ ->
+                // Handle cancel
+                dialog.dismiss()
+            }
+
+        // Muestra el diálogo
+        builder.create().show()
     }
 
     private fun requestCameraAndStart() {

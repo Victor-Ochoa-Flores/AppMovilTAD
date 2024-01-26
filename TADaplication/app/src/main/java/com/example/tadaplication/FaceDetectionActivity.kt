@@ -36,13 +36,14 @@ class FaceDetectionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityFaceDetectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        cameraSelector =
-            CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_FRONT).build()
-        cameraXViewModel.value.processCameraProvider.observe(this) { provider ->
-            processCameraProvider = provider
-            bindCameraPreview()
-            bindInputAnalyser()
+        binding.previewView.post {
+            cameraSelector =
+                CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_FRONT).build()
+            cameraXViewModel.value.processCameraProvider.observe(this) { provider ->
+                processCameraProvider = provider
+                bindCameraPreview()
+                bindInputAnalyser()
+            }
         }
     }
 

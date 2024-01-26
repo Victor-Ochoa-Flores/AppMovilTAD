@@ -34,13 +34,14 @@ class ScanActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        cameraSelector =
-            CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
+        binding.previewView.post {
+            cameraSelector = CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
 
-        cameraXViewModel.value.processCameraProvider.observe(this) { provider ->
-            processCameraProvider = provider
-            bindCameraPreview()
-            bindInputAnalyser()
+            cameraXViewModel.value.processCameraProvider.observe(this) { provider ->
+                processCameraProvider = provider
+                bindCameraPreview()
+                bindInputAnalyser()
+            }
         }
     }
 
@@ -82,6 +83,7 @@ class ScanActivity : AppCompatActivity() {
             Log.e(TAG, illegalArgumentException.message ?: "IllegalArgumentException")
         }
     }
+
 
     @SuppressLint("UnsafeOptInUsageError")
     private fun processImageProxy(
