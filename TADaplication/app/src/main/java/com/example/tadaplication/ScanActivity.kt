@@ -1,10 +1,10 @@
 package com.example.tadaplication
 
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.camera.core.CameraSelector
@@ -12,7 +12,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import com.example.tadaplication.databinding.ActivityScannBinding
+import com.example.tadaplication.databinding.ActivityScanBinding
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -20,9 +20,9 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
-class ScannActivity : AppCompatActivity() {
+class ScanActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityScannBinding
+    private lateinit var binding: ActivityScanBinding
     private lateinit var cameraSelector: CameraSelector
     private lateinit var processCameraProvider: ProcessCameraProvider
     private lateinit var cameraPreview: Preview
@@ -32,7 +32,7 @@ class ScannActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityScannBinding.inflate(layoutInflater)
+        binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
         cameraSelector =
             CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
@@ -122,10 +122,10 @@ class ScannActivity : AppCompatActivity() {
     }
 
     companion object {
-        private val TAG = ScannActivity::class.simpleName
+        private val TAG = ScanActivity::class.simpleName
 
         fun startScanner(context: Context) {
-            Intent(context, ScannActivity::class.java).also {
+            Intent(context, ScanActivity::class.java).also {
                 context.startActivity(it)
             }
         }

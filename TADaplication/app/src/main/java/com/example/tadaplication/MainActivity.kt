@@ -14,11 +14,12 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-
+import com.example.tadaplication.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
     private var cancellationSignal: CancellationSignal?= null
+    private lateinit var binding: ActivityMainBinding
     private val authenticationCallback : BiometricPrompt.AuthenticationCallback
         get() =
             @RequiresApi(Build.VERSION_CODES.P)
@@ -35,16 +36,15 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-    @SuppressLint("SuspiciousIndentation")
     @RequiresApi(Build.VERSION_CODES.P)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
     checkBiometricSupport()
-    val btn_authenticate: Button = findViewById<Button>(R.id.btn_authenticate)
 
-        btn_authenticate.setOnClickListener(){
+        binding.btnAuthenticate.setOnClickListener(){
             val biometricPrompt = BiometricPrompt.Builder(this)
                 .setTitle("Especifique su bloqueo de pantalla para acceder")
                 .setSubtitle("Desbloquee la aplicación para continuar")
