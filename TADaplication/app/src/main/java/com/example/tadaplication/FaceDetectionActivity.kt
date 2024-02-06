@@ -5,8 +5,9 @@ import android.os.Bundle
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.provider.MediaStore
 import android.util.Log
-import android.view.Surface
 import androidx.activity.viewModels
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -18,8 +19,16 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
-import java.util.concurrent.ExecutorService
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.Executors
+import android.os.AsyncTask
+import java.io.ByteArrayOutputStream
+import android.util.Base64
+import org.json.JSONObject
+import java.io.OutputStream
+import kotlin.math.log
+
 
 class FaceDetectionActivity : AppCompatActivity() {
 
@@ -33,6 +42,7 @@ class FaceDetectionActivity : AppCompatActivity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         binding = ActivityFaceDetectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -44,6 +54,85 @@ class FaceDetectionActivity : AppCompatActivity() {
                 bindCameraPreview()
                 bindInputAnalyser()
             }
+        }
+        binding.analyzeButton.setOnClickListener {
+            val imageBitmap = binding.previewView.bitmap
+
+            if (imageBitmap != null) {
+
+                val imageBytes = convertBitmapToBytes(imageBitmap)
+                val jsonRequest = JSONObject().apply {
+                    put("Nombres", "NombreEjemplo")
+                    put("ImagenBlob", imageBytes)
+                }
+
+                val imageUrl = "https://tu-servidor-en-azure.com/tu-endpoint-api"
+                val uploadImageTask = UploadImageTask(imageUrl, jsonRequest)
+                uploadImageTask.execute()
+            } else {
+                Log.e(TAG, "La imagen es nula")
+            }
+        }
+    }
+
+    class UploadImageTask(private val apiUrl: String, private val jsonRequest: JSONObject) :
+        AsyncTask<Void, Void, Boolean>() {
+
+        override fun doInBackground(vararg params: Void?): Boolean {
+            try {
+                val url = URL(apiUrl)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.doOutput = true
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+
+                // Enviar el objeto JSON como cuerpo de la solicitud POST
+                val outputStream: OutputStream = connection.outputStream
+                outputStream.write(jsonRequest.toString().toByteArray())
+                outputStream.flush()
+                outputStream.close()
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK){
+                    Log.e("PRUEBA MOBILE", "Si OK todo")
+                }
+                else
+                    Log.e("PRUEBA MOBILE", "NO OK todo")
+
+                return responseCode == HttpURLConnection.HTTP_OK
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            return false
+        }
+    }
+
+    private fun convertBitmapToBytes(bitmap: Bitmap): ByteArray {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        return byteArrayOutputStream.toByteArray()
+    }
+
+    private fun saveImageToGallery() {
+        // Obtener la imagen de la vista de la cámara (PreviewView)
+        val bitmap = binding.previewView.bitmap
+
+        // Guardar la imagen en la galería utilizando la API de MediaStore
+        val imageUrl = MediaStore.Images.Media.insertImage(
+            contentResolver,
+            bitmap,
+            "FaceImage",
+            "Detected face image"
+        )
+
+        if (imageUrl != null) {
+            // Éxito al guardar la imagen
+            Log.d(TAG, "Imagen guardada en la galería: $imageUrl")
+
+            finish()
+        } else {
+            Log.e(TAG, "Error al guardar la imagen en la galería")
         }
     }
 

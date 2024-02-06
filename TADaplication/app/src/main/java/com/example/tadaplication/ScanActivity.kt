@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Looper
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.camera.core.CameraSelector
@@ -19,6 +20,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import java.util.logging.Handler
 
 class ScanActivity : AppCompatActivity() {
 
@@ -26,6 +28,7 @@ class ScanActivity : AppCompatActivity() {
     private lateinit var cameraSelector: CameraSelector
     private lateinit var processCameraProvider: ProcessCameraProvider
     private lateinit var cameraPreview: Preview
+    private val handler = android.os.Handler(Looper.getMainLooper())
     private lateinit var imageAnalysis: ImageAnalysis
 
     private val cameraXViewModel = viewModels<CameraXViewModel>()
@@ -97,6 +100,7 @@ class ScanActivity : AppCompatActivity() {
             .addOnSuccessListener { barcodes ->
                 if (barcodes.isNotEmpty()) {
                     showBarcodeInfo(barcodes.first())
+
                 }
             }
             .addOnFailureListener {
@@ -121,6 +125,8 @@ class ScanActivity : AppCompatActivity() {
                 binding.textViewQrContent.text = barcode.rawValue
             }
         }
+
+
     }
 
     companion object {
