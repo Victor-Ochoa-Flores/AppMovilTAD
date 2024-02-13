@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import kotlin.math.ceil
 
@@ -38,7 +39,14 @@ open class FaceBoxOverlay(context: Context?, attrs: AttributeSet?) : View(contex
                 top = faceBoundingBox.top * scale + offsetY
                 right = faceBoundingBox.left * scale + offsetX
                 bottom = faceBoundingBox.bottom * scale + offsetY
+
+                Log.i ("coordenadas","entra left O $left")
+                Log.i ("coordenadas","entra top 0 $top")
+                Log.i ("coordenadas","entra right 0 $right")
+                Log.i ("coordenadas","entra bottom 0 $bottom")
             }
+
+
 
             val centerX = overlay.width.toFloat() / 2
 

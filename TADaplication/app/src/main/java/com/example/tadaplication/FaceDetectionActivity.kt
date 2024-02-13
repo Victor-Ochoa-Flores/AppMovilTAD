@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.viewModels
@@ -25,9 +26,15 @@ import java.util.concurrent.Executors
 import android.os.AsyncTask
 import java.io.ByteArrayOutputStream
 import android.util.Base64
+import android.widget.TextView
+import androidx.annotation.OptIn
+import androidx.camera.core.ExperimentalGetImage
 import org.json.JSONObject
 import java.io.OutputStream
+import kotlin.math.ceil
 import kotlin.math.log
+import kotlin.math.max
+import kotlin.math.min
 
 
 class FaceDetectionActivity : AppCompatActivity() {
@@ -37,6 +44,7 @@ class FaceDetectionActivity : AppCompatActivity() {
     private lateinit var processCameraProvider: ProcessCameraProvider
     private lateinit var cameraPreview: Preview
     private lateinit var imageAnalysis: ImageAnalysis
+    private var currentStep = 0
 
     private val cameraXViewModel = viewModels<CameraXViewModel>()
 
@@ -46,77 +54,146 @@ class FaceDetectionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityFaceDetectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+
         binding.previewView.post {
             cameraSelector =
                 CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_FRONT).build()
             cameraXViewModel.value.processCameraProvider.observe(this) { provider ->
                 processCameraProvider = provider
                 bindCameraPreview()
-                bindInputAnalyser()
+                bindInputAnalyzer()
             }
         }
-        binding.analyzeButton.setOnClickListener {
-            val imageBitmap = binding.previewView.bitmap
 
-            if (imageBitmap != null) {
+    }
 
-                val imageBytes = convertBitmapToBytes(imageBitmap)
-                val jsonRequest = JSONObject().apply {
-                    put("Nombres", "NombreEjemplo")
-                    put("ImagenBlob", imageBytes)
+    private fun bindCameraPreview() {
+        cameraPreview = Preview.Builder()
+            .setTargetRotation(binding.previewView.display.rotation)
+            .build()
+        cameraPreview.setSurfaceProvider(binding.previewView.surfaceProvider)
+
+        try {
+            processCameraProvider.bindToLifecycle(this, cameraSelector, cameraPreview)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error binding camera preview", e)
+        }
+    }
+
+    private fun bindInputAnalyzer() {
+        val detector = FaceDetection.getClient(
+            FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
+                .build()
+        )
+
+        imageAnalysis = ImageAnalysis.Builder()
+            .setTargetRotation(binding.previewView.display.rotation)
+            .build()
+
+        val cameraExecutor = Executors.newSingleThreadExecutor()
+
+        imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+            processImageProxy(detector, imageProxy)
+        }
+
+        try {
+            processCameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error binding image analyzer", e)
+        }
+    }
+
+    @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
+        val inputImage =
+            InputImage.fromMediaImage(imageProxy.image!!, imageProxy.imageInfo.rotationDegrees)
+
+        detector.process(inputImage).addOnSuccessListener { faces ->
+            binding.graphicOverlay.clear()
+            faces.forEach { face ->
+                val faceBox = FaceBox(binding.graphicOverlay, face, imageProxy.image!!.cropRect)
+                binding.graphicOverlay.add(faceBox)
+
+                // Validar posición del rostro antes de tomar la foto
+                if (isFaceInCorrectPosition(face, currentStep)) {
+                    Log.i ("prueba","TOMA FOTO")
+                    takePhoto(face.boundingBox)
+                    updateInstructionText()
+                    Log.i ("prueba","DESPUES DE FOTO")
                 }
-
-                val imageUrl = "https://tu-servidor-en-azure.com/tu-endpoint-api"
-                val uploadImageTask = UploadImageTask(imageUrl, jsonRequest)
-                uploadImageTask.execute()
-            } else {
-                Log.e(TAG, "La imagen es nula")
-            }
-        }
-    }
-
-    class UploadImageTask(private val apiUrl: String, private val jsonRequest: JSONObject) :
-        AsyncTask<Void, Void, Boolean>() {
-
-        override fun doInBackground(vararg params: Void?): Boolean {
-            try {
-                val url = URL(apiUrl)
-                val connection = url.openConnection() as HttpURLConnection
-                connection.doOutput = true
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json")
-
-                // Enviar el objeto JSON como cuerpo de la solicitud POST
-                val outputStream: OutputStream = connection.outputStream
-                outputStream.write(jsonRequest.toString().toByteArray())
-                outputStream.flush()
-                outputStream.close()
-
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK){
-                    Log.e("PRUEBA MOBILE", "Si OK todo")
+                else{
+                    //Log.i ("prueba","entra a else no coincide con conrrenStep")
                 }
-                else
-                    Log.e("PRUEBA MOBILE", "NO OK todo")
-
-                return responseCode == HttpURLConnection.HTTP_OK
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-
-            return false
+        }.addOnFailureListener {
+            it.printStackTrace()
+        }.addOnCompleteListener {
+            imageProxy.close()
         }
     }
 
-    private fun convertBitmapToBytes(bitmap: Bitmap): ByteArray {
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-        return byteArrayOutputStream.toByteArray()
+    private fun isFaceInCorrectPosition(face: com.google.mlkit.vision.face.Face, step: Int): Boolean {
+        Log.i ("prueba","entra A validar foto $step" )
+        when (step) {
+            0 -> {
+                // Validar perfil derecho
+                val headEulerAngleY = face.headEulerAngleY
+                Log.i ("prueba","entra a 0 -> $headEulerAngleY" )
+                return headEulerAngleY > 43 && headEulerAngleY < 55
+
+            }
+            1 -> {
+                // Validar perfil izquierdo
+                val headEulerAngleY = face.headEulerAngleY
+                Log.i ("prueba","entra a 1 -> $headEulerAngleY")
+                return headEulerAngleY < -43 && headEulerAngleY > -55
+
+            }
+            2 -> {
+                // Validar frente
+                val headEulerAngleY = face.headEulerAngleY
+                Log.i ("prueba","entra a 2 -> $headEulerAngleY")
+                return headEulerAngleY > -3 && headEulerAngleY < 3
+            }
+            // Agrega más casos según sea necesario
+            else -> return false
+        }
     }
 
-    private fun saveImageToGallery() {
+    @SuppressLint("SuspiciousIndentation")
+    private fun takePhoto(faceBoundingBox: Rect) {
+        val bitmap = binding.previewView.bitmap ?: return
+
+            saveImageToGallery(bitmap)
+            Thread.sleep(500)
+            saveImageToGallery(bitmap)
+            Thread.sleep(500)
+            saveImageToGallery(bitmap)
+
+    }
+
+
+
+
+    private fun updateInstructionText() {
+
+        when (currentStep) {
+            0 -> binding.instructionText.text = "Coloca tu perfil izquierda"
+            1 -> binding.instructionText.text = "Coloca tu perfil al frente"
+            2 -> binding.instructionText.text = "Finalizado"
+            // Puedes agregar más pasos según sea necesario
+            else -> {
+                Log.i ("prueba","entra a else de update")
+            }
+        }
+        currentStep++
+    }
+
+    private fun saveImageToGallery(bitmap: Bitmap) {
         // Obtener la imagen de la vista de la cámara (PreviewView)
-        val bitmap = binding.previewView.bitmap
+
 
         // Guardar la imagen en la galería utilizando la API de MediaStore
         val imageUrl = MediaStore.Images.Media.insertImage(
@@ -130,75 +207,21 @@ class FaceDetectionActivity : AppCompatActivity() {
             // Éxito al guardar la imagen
             Log.d(TAG, "Imagen guardada en la galería: $imageUrl")
 
-            finish()
         } else {
             Log.e(TAG, "Error al guardar la imagen en la galería")
         }
     }
 
-    private fun bindCameraPreview() {
-        cameraPreview = Preview.Builder()
-            .setTargetRotation(binding.previewView.display.rotation)
-            .build()
-        cameraPreview.setSurfaceProvider(binding.previewView.surfaceProvider)
-        try {
-            processCameraProvider.bindToLifecycle(this, cameraSelector, cameraPreview)
-        } catch (illegalStateException: IllegalStateException) {
-            Log.e(TAG, illegalStateException.message ?: "IllegalStateException")
-        } catch (illegalArgumentException: IllegalArgumentException) {
-            Log.e(TAG, illegalArgumentException.message ?: "IllegalArgumentException")
-        }
-    }
-
-    private fun bindInputAnalyser() {
-        val detector = FaceDetection.getClient(
-            FaceDetectorOptions.Builder()
-                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
-                .build()
-        )
-        imageAnalysis = ImageAnalysis.Builder()
-            .setTargetRotation(binding.previewView.display.rotation)
-            .build()
-
-        val cameraExecutor = Executors.newSingleThreadExecutor()
-
-        imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
-            processImageProxy(detector, imageProxy)
-        }
-
-        try {
-            processCameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis)
-        } catch (illegalStateException: IllegalStateException) {
-            Log.e(TAG, illegalStateException.message ?: "IllegalStateException")
-        } catch (illegalArgumentException: IllegalArgumentException) {
-            Log.e(TAG, illegalArgumentException.message ?: "IllegalArgumentException")
-        }
-    }
-
-    @SuppressLint("UnsafeOptInUsageError")
-    private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
-        val inputImage =
-            InputImage.fromMediaImage(imageProxy.image!!, imageProxy.imageInfo.rotationDegrees)
-        detector.process(inputImage).addOnSuccessListener { faces ->
-            binding.graphicOverlay.clear()
-            faces.forEach { face ->
-                val faceBox = FaceBox(binding.graphicOverlay, face, imageProxy.image!!.cropRect)
-                binding.graphicOverlay.add(faceBox)
-            }
-        }.addOnFailureListener {
-            it.printStackTrace()
-        }.addOnCompleteListener {
-            imageProxy.close()
-        }
-    }
 
     companion object {
         private val TAG = FaceDetectionActivity::class.simpleName
+
         fun startActivity(context: Context) {
             Intent(context, FaceDetectionActivity::class.java).also {
                 context.startActivity(it)
             }
         }
     }
+
+
 }
