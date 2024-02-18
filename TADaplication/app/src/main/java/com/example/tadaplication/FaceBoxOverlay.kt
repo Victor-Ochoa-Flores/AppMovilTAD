@@ -12,7 +12,7 @@ import kotlin.math.ceil
 open class FaceBoxOverlay(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
 
     private val lock = Any()
-    private val faceBoxes: MutableList<FaceBox> = mutableListOf()
+    val faceBoxes: MutableList<FaceBox> = mutableListOf()
     var mScale: Float? = null
     var mOffsetX: Float? = null
     var mOffsetY: Float? = null

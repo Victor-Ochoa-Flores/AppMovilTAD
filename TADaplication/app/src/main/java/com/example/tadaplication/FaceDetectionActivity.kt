@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.graphics.RectF
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.viewModels
@@ -20,21 +21,11 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.Executors
-import android.os.AsyncTask
-import java.io.ByteArrayOutputStream
-import android.util.Base64
-import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
-import org.json.JSONObject
-import java.io.OutputStream
+import com.google.mlkit.vision.face.Face
 import kotlin.math.ceil
-import kotlin.math.log
-import kotlin.math.max
-import kotlin.math.min
 
 
 class FaceDetectionActivity : AppCompatActivity() {
@@ -117,9 +108,11 @@ class FaceDetectionActivity : AppCompatActivity() {
                 binding.graphicOverlay.add(faceBox)
 
                 // Validar posición del rostro antes de tomar la foto
+
                 if (isFaceInCorrectPosition(face, currentStep)) {
                     Log.i ("prueba","TOMA FOTO")
-                    takePhoto(face.boundingBox)
+                    Thread.sleep(300)
+                    takePhoto(binding.graphicOverlay,face,imageProxy.image!!.cropRect)
                     updateInstructionText()
                     Log.i ("prueba","DESPUES DE FOTO")
                 }
@@ -132,6 +125,47 @@ class FaceDetectionActivity : AppCompatActivity() {
         }.addOnCompleteListener {
             imageProxy.close()
         }
+    }
+
+    @SuppressLint("SuspiciousIndentation")
+    private fun takePhoto(overlay: FaceBoxOverlay, face: Face, imageRect: Rect) {
+
+        val bitmap = binding.previewView.bitmap ?: return
+        val scaleX = overlay.width.toFloat() / imageRect.height().toFloat()
+        val scaleY = overlay.height.toFloat() / imageRect.width().toFloat()
+        val scale = scaleX.coerceAtLeast(scaleY)
+        var izquierda : Float
+        var derecha : Float
+        var arriba: Float
+        var abajo : Float
+        
+        overlay.mScale = scale
+
+        val offsetX = (overlay.width.toFloat() - ceil(imageRect.height().toFloat() * scale)) / 2.0f
+        val offsetY = (overlay.height.toFloat() - ceil(imageRect.width().toFloat() * scale)) / 2.0f
+
+        overlay.mOffsetX = offsetX
+        overlay.mOffsetY = offsetY
+
+
+        izquierda = face.boundingBox.right * scale + offsetX
+        arriba = face.boundingBox.top * scale + offsetY
+        derecha = face.boundingBox.left * scale + offsetX
+        abajo = face.boundingBox.bottom * scale + offsetY
+
+        val centerX = overlay.width.toFloat() / 2
+
+        izquierda = centerX + (centerX - izquierda)
+        derecha = centerX - (derecha - centerX)
+
+        val faceBitmap = Bitmap.createBitmap(
+            bitmap,
+            izquierda.toInt(),   // Ajustar la coordenada izquierda
+            arriba.toInt(),      // Ajustar la coordenada arriba
+            (derecha - izquierda).toInt(),  // Ancho ajustado
+            (abajo - arriba).toInt()        // Altura ajustada
+        )
+        saveImageToGallery(faceBitmap)
     }
 
     private fun isFaceInCorrectPosition(face: com.google.mlkit.vision.face.Face, step: Int): Boolean {
@@ -161,21 +195,6 @@ class FaceDetectionActivity : AppCompatActivity() {
             else -> return false
         }
     }
-
-    @SuppressLint("SuspiciousIndentation")
-    private fun takePhoto(faceBoundingBox: Rect) {
-        val bitmap = binding.previewView.bitmap ?: return
-
-            saveImageToGallery(bitmap)
-            Thread.sleep(500)
-            saveImageToGallery(bitmap)
-            Thread.sleep(500)
-            saveImageToGallery(bitmap)
-
-    }
-
-
-
 
     private fun updateInstructionText() {
 
