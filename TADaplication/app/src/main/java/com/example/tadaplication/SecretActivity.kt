@@ -39,6 +39,23 @@ class SecretActivity  : AppCompatActivity() {
         recyclerView = binding.recyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
         val adapter = CuentaAdapter(cuentas)
+
+        adapter.setOnItemClickListener(object : CuentaAdapter.OnItemClickListener {
+            override fun onItemClick(position: Int) {
+                val selectedCuenta = cuentas[position]
+
+                // Crear un Intent para abrir DetailsActivity y pasar los datos seleccionados
+                val intent = Intent(this@SecretActivity, DetailsActivity::class.java).apply {
+                    putExtra("correo", selectedCuenta.correo)
+                    putExtra("nombre", selectedCuenta.nombre)
+                    putExtra("id", selectedCuenta.id)
+                    // Puedes pasar más datos según tus necesidades
+                }
+
+                // Iniciar DetailsActivity
+                startActivityForResult(intent, DELETE_PERSON_REQUEST)
+            }
+        })
         recyclerView.adapter = adapter
 
         updateRecyclerView()
@@ -78,7 +95,7 @@ class SecretActivity  : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ADD_PERSON_REQUEST && resultCode == Activity.RESULT_OK) {
+        if ((requestCode == ADD_PERSON_REQUEST && resultCode == Activity.RESULT_OK) ||(requestCode == DELETE_PERSON_REQUEST && resultCode == Activity.RESULT_OK) ) {
             // Update the RecyclerView after adding a new person
             updateRecyclerView()
         }
@@ -96,7 +113,8 @@ class SecretActivity  : AppCompatActivity() {
             do {
                 val name = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_CORREO))
                 val lastName = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_NOMBRE))
-                cuentas.add(Cuenta(name, lastName))
+                val id = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_ID))
+                cuentas.add(Cuenta(name, lastName,id))
             } while (cursor.moveToNext())
         }
 
@@ -140,5 +158,6 @@ class SecretActivity  : AppCompatActivity() {
 
     companion object {
         const val ADD_PERSON_REQUEST = 1
+        const val DELETE_PERSON_REQUEST = 2
     }
 }

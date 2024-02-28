@@ -8,7 +8,7 @@
     tools:context=".DetailsActivity">
 
     <TextView
-        android:id="@+id/textViewNombre"
+        android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Nombre"
@@ -20,6 +20,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Correo"
+        android:textSize="16sp" />
+    <TextView
+        android:id="@+id/textViewNombre"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nombre"
         android:textSize="16sp" />
 
     <Button
