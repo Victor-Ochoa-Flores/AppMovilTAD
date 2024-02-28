@@ -46,8 +46,6 @@ open class FaceBoxOverlay(context: Context?, attrs: AttributeSet?) : View(contex
                 Log.i ("coordenadas","entra bottom 0 $bottom")
             }
 
-
-
             val centerX = overlay.width.toFloat() / 2
 
             return mappedBox.apply {

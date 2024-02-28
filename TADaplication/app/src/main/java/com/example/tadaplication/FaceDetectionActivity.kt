@@ -1,5 +1,6 @@
 package com.example.tadaplication
-
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.annotation.SuppressLint
@@ -7,7 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.graphics.RectF
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.viewModels
@@ -23,10 +24,11 @@ import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import java.util.concurrent.Executors
 import androidx.annotation.OptIn
+import androidx.annotation.RequiresApi
 import androidx.camera.core.ExperimentalGetImage
 import com.google.mlkit.vision.face.Face
 import kotlin.math.ceil
-import android.util.Base64
+import java.util.Base64
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
@@ -43,15 +45,24 @@ class FaceDetectionActivity : AppCompatActivity() {
     private lateinit var cameraPreview: Preview
     private lateinit var imageAnalysis: ImageAnalysis
     private var currentStep = 0
-
+    private val jsonObject = JSONObject()
     private val cameraXViewModel = viewModels<CameraXViewModel>()
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
         binding = ActivityFaceDetectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        val intent = intent
+        if (intent.hasExtra("token")) {
+            val token = intent.getStringExtra("token")
+            jsonObject.put("token",token)
+            Log.i("coordenadas", "Token from response: $token")
+            // Ahora, puedes usar 'datoRecibido' en 'ActivityB'
+        }
 
 
         binding.previewView.post {
@@ -79,6 +90,7 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun bindInputAnalyzer() {
         val detector = FaceDetection.getClient(
             FaceDetectorOptions.Builder()
@@ -104,6 +116,7 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
         val inputImage =
             InputImage.fromMediaImage(imageProxy.image!!, imageProxy.imageInfo.rotationDegrees)
@@ -119,7 +132,7 @@ class FaceDetectionActivity : AppCompatActivity() {
                 if (isFaceInCorrectPosition(face, currentStep)) {
                     Log.i ("prueba","TOMA FOTO")
                     Thread.sleep(300)
-                    takePhoto(binding.graphicOverlay,face,imageProxy.image!!.cropRect)
+                    takePhoto(binding.graphicOverlay,face,imageProxy.image!!.cropRect,currentStep)
                     updateInstructionText()
                     Log.i ("prueba","DESPUES DE FOTO")
                 }
@@ -134,49 +147,94 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SuspiciousIndentation")
-    private fun takePhoto(overlay: FaceBoxOverlay, face: Face, imageRect: Rect) {
-
-        val bitmap = binding.previewView.bitmap ?: return
-        val scaleX = overlay.width.toFloat() / imageRect.height().toFloat()
-        val scaleY = overlay.height.toFloat() / imageRect.width().toFloat()
-        val scale = scaleX.coerceAtLeast(scaleY)
-        var izquierda : Float
-        var derecha : Float
-        var arriba: Float
-        var abajo : Float
-        
-        overlay.mScale = scale
-
-        val offsetX = (overlay.width.toFloat() - ceil(imageRect.height().toFloat() * scale)) / 2.0f
-        val offsetY = (overlay.height.toFloat() - ceil(imageRect.width().toFloat() * scale)) / 2.0f
-
-        overlay.mOffsetX = offsetX
-        overlay.mOffsetY = offsetY
-
-
-        izquierda = face.boundingBox.right * scale + offsetX
-        arriba = face.boundingBox.top * scale + offsetY
-        derecha = face.boundingBox.left * scale + offsetX
-        abajo = face.boundingBox.bottom * scale + offsetY
-
-        val centerX = overlay.width.toFloat() / 2
-
-        izquierda = centerX + (centerX - izquierda)
-        derecha = centerX - (derecha - centerX)
-
-        val faceBitmap = Bitmap.createBitmap(
-            bitmap,
-            izquierda.toInt(),   // Ajustar la coordenada izquierda
-            arriba.toInt(),      // Ajustar la coordenada arriba
-            (derecha - izquierda).toInt(),  // Ancho ajustado
-            (abajo - arriba).toInt()        // Altura ajustada
-        )
-        //saveImageToGallery(faceBitmap)
-        val base64Image = convertBitmapToBase64(faceBitmap)
-        sendImageToServer(base64Image)
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun generateTempToken(seedToken: String): String {
+        val timestamp = System.currentTimeMillis() / 60000  // Obtiene la cantidad de minutos desde epoch
+        val mac = Mac.getInstance("HmacSHA256")
+        val secretKeySpec = SecretKeySpec(seedToken.toByteArray(), "HmacSHA256")
+        mac.init(secretKeySpec)
+        val hash = mac.doFinal(timestamp.toString().toByteArray())
+        return Base64.getEncoder().encodeToString(hash)
     }
-    private fun sendImageToServer(base64Image: String) {
+    @RequiresApi(Build.VERSION_CODES.O)
+    @SuppressLint("SuspiciousIndentation")
+    private fun takePhoto(overlay: FaceBoxOverlay, face: Face, imageRect: Rect, current: Int) {
+
+        try {
+
+            val bitmap = binding.previewView.bitmap ?: return
+            val scaleX = overlay.width.toFloat() / imageRect.height().toFloat()
+            val scaleY = overlay.height.toFloat() / imageRect.width().toFloat()
+            val scale = scaleX.coerceAtLeast(scaleY)
+            var izquierda : Float
+            var derecha : Float
+            var arriba: Float
+            var abajo : Float
+            var tipoCara : String
+
+            tipoCara = ""
+            overlay.mScale = scale
+
+            val offsetX = (overlay.width.toFloat() - ceil(imageRect.height().toFloat() * scale)) / 2.0f
+            val offsetY = (overlay.height.toFloat() - ceil(imageRect.width().toFloat() * scale)) / 2.0f
+
+            overlay.mOffsetX = offsetX
+            overlay.mOffsetY = offsetY
+
+
+            izquierda = face.boundingBox.right * scale + offsetX
+            arriba = face.boundingBox.top * scale + offsetY
+            derecha = face.boundingBox.left * scale + offsetX
+            abajo = face.boundingBox.bottom * scale + offsetY
+
+            val centerX = overlay.width.toFloat() / 2
+
+            izquierda = centerX + (centerX - izquierda)
+            derecha = centerX - (derecha - centerX)
+
+            val faceBitmap = Bitmap.createBitmap(
+                bitmap,
+                izquierda.toInt(),   // Ajustar la coordenada izquierda
+                arriba.toInt(),      // Ajustar la coordenada arriba
+                (derecha - izquierda).toInt(),  // Ancho ajustado
+                (abajo - arriba).toInt()        // Altura ajustada
+            )
+            saveImageToGallery(faceBitmap)
+
+            val base64Image = convertBitmapToBase64(faceBitmap)
+
+            //Para añadir la imagen
+            if (current == 0 ){
+                tipoCara = "fotoPerfilDerecho"
+            }
+            else if (current == 1){
+                tipoCara = "fotoPerfilIzquierdo"
+            }
+            else if (current == 2){
+                tipoCara = "fotoPerfilDefrente"
+            }
+
+            if (tipoCara != "" ){
+
+                jsonObject.put(tipoCara, base64Image)
+
+                if (tipoCara == "PerfilDefrente") {
+                    //sendImageToServer(jsonObject)
+                    // Reiniciar el objeto JSON después de enviar las fotos
+                    jsonObject.remove("fotoPerfilIzquierdo")
+                    jsonObject.remove("fotoPerfilDerecho")
+                    jsonObject.remove("fotoPerfilDefrente")
+                }
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.i("Problema", "Error in takePhoto: ${e.message}")
+        }
+    }
+
+
+    private fun sendImageToServer(jsonObject: JSONObject) {
         val apiUrl = "https://tu-servidor.com/tu-endpoint"
 
         try {
@@ -184,11 +242,8 @@ class FaceDetectionActivity : AppCompatActivity() {
             val connection = url.openConnection() as HttpURLConnection
 
             connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            connection.setRequestProperty("Content-Type", "application/json")
             connection.doOutput = true
-
-            val jsonObject = JSONObject()
-            jsonObject.put("foto", base64Image)
 
             val output: OutputStream = connection.outputStream
             output.write(jsonObject.toString().toByteArray(StandardCharsets.UTF_8))
@@ -196,12 +251,21 @@ class FaceDetectionActivity : AppCompatActivity() {
 
             val responseCode = connection.responseCode
             if (responseCode == HttpURLConnection.HTTP_OK) {
-
                 val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                Log.i ("conexion",responseBody)
+                Log.i("conexion", responseBody)
+
+                val responseJson = JSONObject(responseBody)
+                val token = responseJson.optString("token", "")
+                val nombre = responseJson.optString("nombre", "")
+                val correo = responseJson.optString("correo", "")
+
+                // Use the extracted token as needed
+                Log.i("conexion", "Token from response: $token")
+                Log.i("nombre", "Token from response: $nombre")
+                Log.i("correo", "Token from response: $correo")
 
             } else {
-                Log.i ("conexion","No funcionó")
+                Log.i("conexion", "No funcionó")
             }
 
             connection.disconnect()
@@ -210,11 +274,16 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun convertBitmapToBase64(bitmap: Bitmap): String {
         val byteArrayOutputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
         val byteArray = byteArrayOutputStream.toByteArray()
-        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+
+        // Use java.util.Base64 for encoding
+        val base64String = Base64.getEncoder().encodeToString(byteArray)
+
+        return base64String
     }
 
     private fun isFaceInCorrectPosition(face: com.google.mlkit.vision.face.Face, step: Int): Boolean {
@@ -260,8 +329,6 @@ class FaceDetectionActivity : AppCompatActivity() {
     }
 
     private fun saveImageToGallery(bitmap: Bitmap) {
-        // Obtener la imagen de la vista de la cámara (PreviewView)
-
 
         // Guardar la imagen en la galería utilizando la API de MediaStore
         val imageUrl = MediaStore.Images.Media.insertImage(

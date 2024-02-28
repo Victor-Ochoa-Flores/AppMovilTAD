@@ -8,14 +8,22 @@ import com.example.tadaplication.databinding.ActivityValidQractivityBinding
 
 class validQRActivity : AppCompatActivity() {
     private lateinit var binding: ActivityValidQractivityBinding
+    lateinit var token : String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityValidQractivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val intent = intent
+        if (intent.hasExtra("token")) {
+            token = intent.getStringExtra("token").toString()
+        }
+
         binding.botonContinuar.setOnClickListener {
-            startActivity(Intent(this,FaceDetectionActivity::class.java))
+            val intent = Intent(this, FaceDetectionActivity::class.java)
+            intent.putExtra("token", token)
+            startActivity(intent)
         }
     }
 }

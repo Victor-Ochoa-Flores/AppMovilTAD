@@ -28,9 +28,10 @@ class ScanActivity : AppCompatActivity() {
     private lateinit var cameraSelector: CameraSelector
     private lateinit var processCameraProvider: ProcessCameraProvider
     private lateinit var cameraPreview: Preview
-    private val handler = android.os.Handler(Looper.getMainLooper())
+    private var handler = android.os.Handler(Looper.getMainLooper())
     private lateinit var imageAnalysis: ImageAnalysis
-
+    private var isBarcodeDetected = false
+    lateinit var token : String
     private val cameraXViewModel = viewModels<CameraXViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,9 +99,16 @@ class ScanActivity : AppCompatActivity() {
 
         barcodeScanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
-                if (barcodes.isNotEmpty()) {
+                if (!isBarcodeDetected && barcodes.isNotEmpty()) {
+                    isBarcodeDetected = true
                     showBarcodeInfo(barcodes.first())
 
+                    handler.postDelayed({
+                        val intent = Intent(this, validQRActivity::class.java)
+                        intent.putExtra("token", token)
+                        startActivity(intent)
+                        finish()
+                    }, 3000)
                 }
             }
             .addOnFailureListener {
@@ -115,18 +123,34 @@ class ScanActivity : AppCompatActivity() {
             Barcode.TYPE_URL -> {
                 binding.textViewQrType.text = "URL"
                 binding.textViewQrContent.text = barcode.rawValue
+                token = barcode.rawValue.toString()
             }
             Barcode.TYPE_CONTACT_INFO -> {
                 binding.textViewQrType.text = "Contact"
                 binding.textViewQrContent.text = barcode.contactInfo.toString()
+                token = barcode.contactInfo.toString()
             }
             else -> {
                 binding.textViewQrType.text = "Other"
                 binding.textViewQrContent.text = barcode.rawValue
+                token = barcode.rawValue.toString()
             }
         }
 
 
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        releaseCamera()
+    }
+
+    private fun releaseCamera() {
+        try {
+            // Liberar recursos relacionados con la cámara
+            processCameraProvider.unbindAll()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing camera", e)
+        }
     }
 
     companion object {
