@@ -30,6 +30,7 @@ import java.util.concurrent.Executors
 import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.camera.core.ExperimentalGetImage
+import com.example.tadaplication.databinding.ActivityFaceDetectionValidarBinding
 import com.google.mlkit.vision.face.Face
 import org.json.JSONArray
 import kotlin.math.ceil
@@ -43,9 +44,11 @@ import java.nio.charset.StandardCharsets
 import java.io.File
 import java.io.FileWriter
 
-class FaceDetectionActivity : AppCompatActivity() {
+class FaceDetectionValidarActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityFaceDetectionBinding
+
+
+    private lateinit var binding: ActivityFaceDetectionValidarBinding
     private lateinit var cameraSelector: CameraSelector
     private lateinit var processCameraProvider: ProcessCameraProvider
     private lateinit var cameraPreview: Preview
@@ -59,7 +62,7 @@ class FaceDetectionActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
-        binding = ActivityFaceDetectionBinding.inflate(layoutInflater)
+        binding =ActivityFaceDetectionValidarBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         val intent = intent

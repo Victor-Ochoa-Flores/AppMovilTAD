@@ -52,7 +52,8 @@ class MyDatabaseHelper extends SQLiteOpenHelper {
             if(result == -1){
                 Toast.makeText(context, "Failed", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(context, "Added Successfully!", Toast.LENGTH_SHORT).show();
+                Log.i ("conexion","PASO REGISTRO DB");
+                //Toast.makeText(context, "Added Successfully!", Toast.LENGTH_SHORT).show();
             }
             db.setTransactionSuccessful();
         } finally {

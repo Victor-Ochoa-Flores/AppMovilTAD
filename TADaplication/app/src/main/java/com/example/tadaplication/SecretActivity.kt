@@ -172,7 +172,7 @@ class SecretActivity  : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
+        Log.i ("conexion","on resumen secret")
         Log.i("vista", "onResume() called")
         updateRecyclerView()
     }
