@@ -4,6 +4,7 @@ import javax.crypto.spec.SecretKeySpec
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -11,6 +12,7 @@ import android.graphics.Rect
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.viewModels
@@ -50,6 +52,7 @@ class FaceDetectionActivity : AppCompatActivity() {
     private var currentStep = 0
     private val jsonObject = JSONObject()
     private val cameraXViewModel = viewModels<CameraXViewModel>()
+    private val handler = Handler()
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -134,10 +137,12 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
     private fun goToSecretActivity() {
-        val intent = Intent(this, SecretActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-        startActivity(intent)
-        finish() // Cierra la actividad actual
+        handler.postDelayed({
+            val intent = Intent(this, SecretActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            finish() // Cierra la actividad actual
+            startActivity(intent)
+        }, 2000)
     }
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
@@ -261,8 +266,8 @@ class FaceDetectionActivity : AppCompatActivity() {
 
                     //saveJsonObjectToFile(jsonObject, "hola.txt")
 
-                    /*val sendImageTask = SendImageToServerTask(jsonObject)
-                    sendImageTask.execute()*/
+                    val sendImageTask = SendImageToServerTask(jsonObject,this)
+                    sendImageTask.execute()
 
                     val jsonString = jsonObject.toString()
                     Log.i("JSONObject", jsonString)
@@ -280,11 +285,12 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
-    class SendImageToServerTask(private val jsonObject: JSONObject) : AsyncTask<Void, Void, String>() {
+    class SendImageToServerTask(private val jsonObject: JSONObject,private val contexto: Context) : AsyncTask<Void, Void, String>() {
 
         override fun doInBackground(vararg params: Void?): String {
             val apiUrl = "https://camend-apis.icymoss-4d00a757.eastus.azurecontainerapps.io/registrar_rostro"
             Log.i("conexion", "0")
+
 
             try {
                 Log.i("conexion", "URL")
@@ -350,7 +356,20 @@ class FaceDetectionActivity : AppCompatActivity() {
         override fun onPostExecute(result: String) {
             // Maneja el resultado aquí (actualización de la interfaz de usuario, etc.)
             // Este método se ejecuta en el hilo principal
+
+            var name = "victor"
+            var lastName = "jpe"
+
+            add_BDatos (contexto,name,lastName)
+
         }
+
+        private fun add_BDatos(context: Context, name: String, lastName: String) {
+            val dbHelper = MyDatabaseHelper(context)
+            dbHelper.addCuenta(name, lastName)
+        }
+
+
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

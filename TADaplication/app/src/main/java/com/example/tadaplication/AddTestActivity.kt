@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.EditText
 
 class AddTestActivity : AppCompatActivity() {
+
     private lateinit var editTextName: EditText
     private lateinit var editTextLastName: EditText
     private lateinit var buttonAddPerson: Button

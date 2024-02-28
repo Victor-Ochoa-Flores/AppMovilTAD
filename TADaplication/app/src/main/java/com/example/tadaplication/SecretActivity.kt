@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toolbar
 import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.appcompat.app.AlertDialog
@@ -66,25 +67,26 @@ class SecretActivity  : AppCompatActivity() {
 
     private fun showOptionsDialog() {
         // Crea un diálogo con opciones
-        val options = arrayOf("Reconocimiento Facial", "Escanear QR","Añadir usuario")
+        val options = arrayOf("Escanear QR")
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Selecciona una opción")
             .setItems(options) { _, which ->
                 // Handle click on an option
                 when (which) {
-                    0 -> {
+                    /*0 -> {
                         this.action = Action.FACE_DETECTION
                         requestCameraAndStart()
-                    }
-                    1 -> {
+                    }*/
+                    0 -> {
                         this.action = Action.QR_SCANNER
                         requestCameraAndStart()
                     }
+                    /*
                     2 -> {
                         val intent = Intent(this, AddTestActivity::class.java)
                         startActivityForResult(intent, ADD_PERSON_REQUEST)
 
-                    }
+                    }*/
                 }
             }
             .setNegativeButton("Cancelar") { dialog, _ ->
@@ -95,10 +97,13 @@ class SecretActivity  : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if ((requestCode == ADD_PERSON_REQUEST && resultCode == Activity.RESULT_OK) ||(requestCode == DELETE_PERSON_REQUEST && resultCode == Activity.RESULT_OK) ) {
+        if ((requestCode == ADD_PERSON_REQUEST && resultCode == Activity.RESULT_OK) ||(requestCode == DELETE_PERSON_REQUEST && resultCode == Activity.RESULT_OK)  ) {
             // Update the RecyclerView after adding a new person
+            Log.i("Resulta", "entra")
             updateRecyclerView()
         }
+
+        updateRecyclerView()
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -108,16 +113,20 @@ class SecretActivity  : AppCompatActivity() {
         val cursor = dbHelper.readAllData()
 
         cuentas.clear()
+        Log.i("vista", "entra antes del if")
+        Log.i("vista", "entra antes del if $cursor")
 
         if (cursor != null && cursor.moveToFirst()) {
+            Log.i("vista", "entra antes al do")
             do {
+
                 val name = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_CORREO))
                 val lastName = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_NOMBRE))
                 val id = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_ID))
                 cuentas.add(Cuenta(name, lastName,id))
             } while (cursor.moveToNext())
         }
-
+        Log.i("vista", "entra despes do")
         recyclerView.adapter?.notifyDataSetChanged()
 
         cursor?.close()
@@ -159,5 +168,12 @@ class SecretActivity  : AppCompatActivity() {
     companion object {
         const val ADD_PERSON_REQUEST = 1
         const val DELETE_PERSON_REQUEST = 2
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        Log.i("vista", "onResume() called")
+        updateRecyclerView()
     }
 }
