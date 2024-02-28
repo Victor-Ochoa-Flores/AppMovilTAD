@@ -1,17 +1,25 @@
 package com.example.tadaplication
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toolbar
 import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.tadaplication.databinding.ActivitySecretBinding
-
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class SecretActivity  : AppCompatActivity() {
 
     private val cameraPermission = android.Manifest.permission.CAMERA
     private lateinit var binding: ActivitySecretBinding
     private var action = Action.QR_SCANNER
+    private val cuentas = mutableListOf<Cuenta>()
+    private lateinit var recyclerView: RecyclerView
 
     private val requestPermissionLauncher =
         registerForActivityResult(RequestPermission()) { isGranted ->
@@ -22,9 +30,18 @@ class SecretActivity  : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivitySecretBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val toolbar: androidx.appcompat.widget.Toolbar = binding.toolbar
+        toolbar.title = "AuthApp"
+        setSupportActionBar(binding.toolbar)
+        recyclerView = binding.recyclerView
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        val adapter = CuentaAdapter(cuentas)
+        recyclerView.adapter = adapter
 
+        updateRecyclerView()
         binding.fabAdd.setOnClickListener {
             showOptionsDialog()
         }
@@ -32,7 +49,7 @@ class SecretActivity  : AppCompatActivity() {
 
     private fun showOptionsDialog() {
         // Crea un diálogo con opciones
-        val options = arrayOf("Reconocimiento Facial", "Escanear QR")
+        val options = arrayOf("Reconocimiento Facial", "Escanear QR","Añadir usuario")
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Selecciona una opción")
             .setItems(options) { _, which ->
@@ -46,16 +63,48 @@ class SecretActivity  : AppCompatActivity() {
                         this.action = Action.QR_SCANNER
                         requestCameraAndStart()
                     }
+                    2 -> {
+                        val intent = Intent(this, AddTestActivity::class.java)
+                        startActivityForResult(intent, ADD_PERSON_REQUEST)
+
+                    }
                 }
             }
             .setNegativeButton("Cancelar") { dialog, _ ->
-                // Handle cancel
                 dialog.dismiss()
             }
-
-        // Muestra el diálogo
         builder.create().show()
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ADD_PERSON_REQUEST && resultCode == Activity.RESULT_OK) {
+            // Update the RecyclerView after adding a new person
+            updateRecyclerView()
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private fun updateRecyclerView() {
+
+        val dbHelper = MyDatabaseHelper(this)
+        val cursor = dbHelper.readAllData()
+
+        cuentas.clear()
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                val name = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_CORREO))
+                val lastName = cursor.getString(cursor.getColumnIndexOrThrow(MyDatabaseHelper.COLUMN_NOMBRE))
+                cuentas.add(Cuenta(name, lastName))
+            } while (cursor.moveToNext())
+        }
+
+        recyclerView.adapter?.notifyDataSetChanged()
+
+        cursor?.close()
+    }
+
 
     private fun requestCameraAndStart() {
         if (isPermissionGranted(cameraPermission)) {
@@ -87,5 +136,9 @@ class SecretActivity  : AppCompatActivity() {
 
     private fun startScanner() {
        ScanActivity.startScanner(this)
+    }
+
+    companion object {
+        const val ADD_PERSON_REQUEST = 1
     }
 }

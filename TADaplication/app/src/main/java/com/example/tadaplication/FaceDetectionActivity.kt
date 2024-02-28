@@ -26,6 +26,13 @@ import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import com.google.mlkit.vision.face.Face
 import kotlin.math.ceil
+import android.util.Base64
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.io.OutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.charset.StandardCharsets
 
 
 class FaceDetectionActivity : AppCompatActivity() {
@@ -165,7 +172,49 @@ class FaceDetectionActivity : AppCompatActivity() {
             (derecha - izquierda).toInt(),  // Ancho ajustado
             (abajo - arriba).toInt()        // Altura ajustada
         )
-        saveImageToGallery(faceBitmap)
+        //saveImageToGallery(faceBitmap)
+        val base64Image = convertBitmapToBase64(faceBitmap)
+        sendImageToServer(base64Image)
+    }
+    private fun sendImageToServer(base64Image: String) {
+        val apiUrl = "https://tu-servidor.com/tu-endpoint"
+
+        try {
+            val url = URL(apiUrl)
+            val connection = url.openConnection() as HttpURLConnection
+
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            connection.doOutput = true
+
+            val jsonObject = JSONObject()
+            jsonObject.put("foto", base64Image)
+
+            val output: OutputStream = connection.outputStream
+            output.write(jsonObject.toString().toByteArray(StandardCharsets.UTF_8))
+            output.close()
+
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+
+                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+                Log.i ("conexion",responseBody)
+
+            } else {
+                Log.i ("conexion","No funcionó")
+            }
+
+            connection.disconnect()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun convertBitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }
 
     private fun isFaceInCorrectPosition(face: com.google.mlkit.vision.face.Face, step: Int): Boolean {
