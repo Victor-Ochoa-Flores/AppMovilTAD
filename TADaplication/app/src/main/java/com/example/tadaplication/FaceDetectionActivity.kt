@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.os.AsyncTask
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.viewModels
@@ -35,7 +37,8 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
-
+import java.io.File
+import java.io.FileWriter
 
 class FaceDetectionActivity : AppCompatActivity() {
 
@@ -64,7 +67,6 @@ class FaceDetectionActivity : AppCompatActivity() {
             // Ahora, puedes usar 'datoRecibido' en 'ActivityB'
         }
 
-
         binding.previewView.post {
             cameraSelector =
                 CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_FRONT).build()
@@ -75,6 +77,22 @@ class FaceDetectionActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun saveJsonObjectToFile(jsonObject: JSONObject, fileName: String) {
+        val jsonString = jsonObject.toString()
+
+        try {
+            val downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val file = File(downloadsDirectory, fileName)
+            val fileWriter = FileWriter(file)
+            fileWriter.write(jsonString)
+            fileWriter.flush()
+            fileWriter.close()
+            Log.i("conexion", "JSONObject saved to file: ${file.absolutePath}")
+        } catch (e: Exception) {
+            Log.e("conexion", "Error saving JSONObject to file: ${e.message}")
+        }
     }
 
     private fun bindCameraPreview() {
@@ -115,7 +133,12 @@ class FaceDetectionActivity : AppCompatActivity() {
             Log.e(TAG, "Error binding image analyzer", e)
         }
     }
-
+    private fun goToSecretActivity() {
+        val intent = Intent(this, SecretActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+        finish() // Cierra la actividad actual
+    }
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
         val inputImage =
@@ -156,6 +179,7 @@ class FaceDetectionActivity : AppCompatActivity() {
         val hash = mac.doFinal(timestamp.toString().toByteArray())
         return Base64.getEncoder().encodeToString(hash)
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("SuspiciousIndentation")
     private fun takePhoto(overlay: FaceBoxOverlay, face: Face, imageRect: Rect, current: Int) {
@@ -216,10 +240,33 @@ class FaceDetectionActivity : AppCompatActivity() {
 
             if (tipoCara != "" ){
 
-                jsonObject.put(tipoCara, base64Image)
+                val imageArray: MutableList<String> = if (jsonObject.has(tipoCara)) {
+                    jsonObject[tipoCara] as MutableList<String>
+                } else {
+                    // Create a new array if it doesn't exist
+                    mutableListOf()
+                }
 
-                if (tipoCara == "PerfilDefrente") {
-                    //sendImageToServer(jsonObject)
+                // Add the base64 image to the array
+                imageArray.add(base64Image)
+                imageArray.add(base64Image)
+                imageArray.add(base64Image)
+
+                // Update the JSON object with the array
+                jsonObject.put(tipoCara, imageArray)
+
+
+                if (tipoCara == "fotoPerfilDefrente") {
+                    Log.i("conexion", "antes del SEND")
+
+                    //saveJsonObjectToFile(jsonObject, "hola.txt")
+
+                    /*val sendImageTask = SendImageToServerTask(jsonObject)
+                    sendImageTask.execute()*/
+
+                    val jsonString = jsonObject.toString()
+                    Log.i("JSONObject", jsonString)
+
                     // Reiniciar el objeto JSON después de enviar las fotos
                     jsonObject.remove("fotoPerfilIzquierdo")
                     jsonObject.remove("fotoPerfilDerecho")
@@ -233,44 +280,76 @@ class FaceDetectionActivity : AppCompatActivity() {
         }
     }
 
+    class SendImageToServerTask(private val jsonObject: JSONObject) : AsyncTask<Void, Void, String>() {
 
-    private fun sendImageToServer(jsonObject: JSONObject) {
-        val apiUrl = "https://tu-servidor.com/tu-endpoint"
+        override fun doInBackground(vararg params: Void?): String {
+            val apiUrl = "https://camend-apis.icymoss-4d00a757.eastus.azurecontainerapps.io/registrar_rostro"
+            Log.i("conexion", "0")
 
-        try {
-            val url = URL(apiUrl)
-            val connection = url.openConnection() as HttpURLConnection
+            try {
+                Log.i("conexion", "URL")
 
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.doOutput = true
+                val url = URL(apiUrl)
+                val connection = url.openConnection() as HttpURLConnection
+                Log.i("conexion", "1")
 
-            val output: OutputStream = connection.outputStream
-            output.write(jsonObject.toString().toByteArray(StandardCharsets.UTF_8))
-            output.close()
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.doOutput = true
 
-            val responseCode = connection.responseCode
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                Log.i("conexion", responseBody)
+                Log.i("conexion", "2")
 
-                val responseJson = JSONObject(responseBody)
-                val token = responseJson.optString("token", "")
-                val nombre = responseJson.optString("nombre", "")
-                val correo = responseJson.optString("correo", "")
+                val output: OutputStream = connection.outputStream
+                output.write(jsonObject.toString().toByteArray(StandardCharsets.UTF_8))
+                output.close()
 
-                // Use the extracted token as needed
-                Log.i("conexion", "Token from response: $token")
-                Log.i("nombre", "Token from response: $nombre")
-                Log.i("correo", "Token from response: $correo")
+                Log.i("conexion", "3")
 
-            } else {
-                Log.i("conexion", "No funcionó")
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+
+                    Log.i("conexion", responseBody)
+
+                    val responseJson = JSONObject(responseBody)
+                    val token = responseJson.optString("token_semilla", "")
+                    val nombre = responseJson.optString("nombre", "")
+                    val correo = responseJson.optString("correo", "")
+
+                    // Utiliza el token según sea necesario
+                    Log.i("conexion", "Token from response: $token")
+                    Log.i("conexion", "Nombre from response: $nombre")
+                    Log.i("conexion", "Correo from response: $correo")
+
+                    return responseBody
+                } else {
+                    Log.i("conexion", "Error en la operación de red. Código de respuesta: $responseCode")
+
+                    // Imprimir el mensaje de error si está disponible
+                    val errorMessage = try {
+                        connection.inputStream.bufferedReader().use { it.readText() }
+                    } catch (e: Exception) {
+
+                        Log.i("conexion", e.toString())
+                    }
+
+                    if (errorMessage != null) {
+                        Log.i("conexion", "Mensaje de error: $errorMessage")
+                    }
+
+
+                    return "Error en la operación de red"
+                }
+            } catch (e: Exception) {
+                Log.i("conexion", e.toString())
+                e.printStackTrace()
+                return "Error en la operación de red"
             }
+        }
 
-            connection.disconnect()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        override fun onPostExecute(result: String) {
+            // Maneja el resultado aquí (actualización de la interfaz de usuario, etc.)
+            // Este método se ejecuta en el hilo principal
         }
     }
 
@@ -319,7 +398,10 @@ class FaceDetectionActivity : AppCompatActivity() {
         when (currentStep) {
             0 -> binding.instructionText.text = "Coloca tu perfil izquierda"
             1 -> binding.instructionText.text = "Coloca tu perfil al frente"
-            2 -> binding.instructionText.text = "Finalizado"
+            2 -> {
+                binding.instructionText.text = "Finalizado"
+                goToSecretActivity()
+            }
             // Puedes agregar más pasos según sea necesario
             else -> {
                 Log.i ("prueba","entra a else de update")
