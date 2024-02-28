@@ -142,7 +142,7 @@ class FaceDetectionActivity : AppCompatActivity() {
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             finish() // Cierra la actividad actual
             startActivity(intent)
-        }, 4000)
+        }, 5000)
     }
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
@@ -309,12 +309,13 @@ class FaceDetectionActivity : AppCompatActivity() {
                     val token = responseJson.optString("token_semilla", "")
                     val nombre = responseJson.optString("Nombres", "")
                     val correo = responseJson.optString("Correo", "")
+                    val id = responseJson.optString("idUsuario", "")
 
                     // Utiliza el token según sea necesario
                     Log.i("conexion", "Token from response: $token")
                     Log.i("conexion", "Nombre from response: $nombre")
                     Log.i("conexion", "Correo from response: $correo")
-
+                    Log.i("conexion", "Correo from response: $id")
 
                     if (token.isNotEmpty()) {
                         saveSeedTokenToCache(contexto, token)
@@ -325,8 +326,8 @@ class FaceDetectionActivity : AppCompatActivity() {
                         Log.i("conexion", "Token guardado: $storedSeedToken")
                     }
 
-                    if ( token != "" && nombre != "" && correo != ""){
-                        add_BDatos (contexto,nombre,correo)
+                    if ( token != "" && nombre != "" && correo != ""&& id != ""){
+                        add_BDatos (contexto,nombre,correo,id)
                     }
 
                     return responseBody
@@ -372,9 +373,9 @@ class FaceDetectionActivity : AppCompatActivity() {
             // Este método se ejecuta en el hilo principal
         }
 
-        private fun add_BDatos(context: Context, name: String, lastName: String) {
+        private fun add_BDatos(context: Context, name: String, lastName: String, id: String) {
             val dbHelper = MyDatabaseHelper(context)
-            dbHelper.addCuenta(name, lastName)
+            dbHelper.addCuenta(name, lastName,id)
         }
 
 

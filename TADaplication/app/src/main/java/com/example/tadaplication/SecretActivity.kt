@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts.*
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.tadaplication.databinding.ActivityFaceDetectionValidarBinding
 import com.example.tadaplication.databinding.ActivitySecretBinding
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
@@ -44,17 +45,16 @@ class SecretActivity  : AppCompatActivity() {
         adapter.setOnItemClickListener(object : CuentaAdapter.OnItemClickListener {
             override fun onItemClick(position: Int) {
                 val selectedCuenta = cuentas[position]
-
+                Log.i("conexion", "entra a tocar item")
                 // Crear un Intent para abrir DetailsActivity y pasar los datos seleccionados
-                val intent = Intent(this@SecretActivity, DetailsActivity::class.java).apply {
+                val intent = Intent(this@SecretActivity, FaceDetectionValidarActivity::class.java).apply {
                     putExtra("correo", selectedCuenta.correo)
                     putExtra("nombre", selectedCuenta.nombre)
                     putExtra("id", selectedCuenta.id)
                     // Puedes pasar más datos según tus necesidades
                 }
-
-                // Iniciar DetailsActivity
-                startActivityForResult(intent, DELETE_PERSON_REQUEST)
+                startActivity(intent)
+                Log.i("conexion", "sale tocar item")
             }
         })
         recyclerView.adapter = adapter

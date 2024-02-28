@@ -25,16 +25,16 @@ class AddTestActivity : AppCompatActivity() {
             val name = editTextName.text.toString()
             val lastName = editTextLastName.text.toString()
 
-            if (name.isNotEmpty() && lastName.isNotEmpty()) {
+            /*if (name.isNotEmpty() && lastName.isNotEmpty()) {
                 // Save data to the database
                 val dbHelper = MyDatabaseHelper(this)
-                dbHelper.addCuenta(name, lastName)
+                dbHelper.addCuenta(name, lastName, 1)
 
                 // Set result and finish activity
                 val resultIntent = Intent()
                 setResult(Activity.RESULT_OK, resultIntent)
                 finish()
-            }
+            }*/
         }
     }
 }

@@ -28,7 +28,7 @@ class MyDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         String query = "CREATE TABLE " + TABLE_NAME +
-                " (" + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                " (" + COLUMN_ID + " TEXT PRIMARY KEY, " +
                 COLUMN_CORREO + " TEXT, " +
                 COLUMN_NOMBRE + " TEXT);";
         db.execSQL(query);
@@ -39,18 +39,20 @@ class MyDatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    void addCuenta(String correo, String nombre){
+    void addCuenta(String correo, String nombre,String id){
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
 
         cv.put(COLUMN_CORREO, correo);
         cv.put(COLUMN_NOMBRE, nombre);
+        cv.put(COLUMN_ID, id);
 
         db.beginTransaction();
         try {
             long result = db.insert(TABLE_NAME, null, cv);
             if(result == -1){
-                Toast.makeText(context, "Failed", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(context, "Failed", Toast.LENGTH_SHORT).show();
+                Log.i ("conexion","NO PASO REGISTRO DB");
             } else {
                 Log.i ("conexion","PASO REGISTRO DB");
                 //Toast.makeText(context, "Added Successfully!", Toast.LENGTH_SHORT).show();

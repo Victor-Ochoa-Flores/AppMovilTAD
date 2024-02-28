@@ -58,6 +58,10 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
     private val cameraXViewModel = viewModels<CameraXViewModel>()
     private val handler = Handler()
 
+    private lateinit var nombreAux: String
+    private lateinit var CorreoAux: String
+    private lateinit var idAux: String
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -65,13 +69,23 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
         binding =ActivityFaceDetectionValidarBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val intent = intent
+        val correo = intent.getStringExtra("correo")
+        val nombre = intent.getStringExtra("nombre")
+        val id = intent.getStringExtra("id")
+
+        if (nombre != null && id != null && correo != null) {
+            nombreAux = nombre
+            CorreoAux = correo
+            idAux = id
+        }
+        jsonObject.put("idusuario",idAux.toInt())
+
+        /*val intent = intent
         if (intent.hasExtra("token")) {
             val token = intent.getStringExtra("token")
             jsonObject.put("token",token)
             Log.i("coordenadas", "Token from response: $token")
-            // Ahora, puedes usar 'datoRecibido' en 'ActivityB'
-        }
+        }*/
 
         binding.previewView.post {
             cameraSelector =
@@ -141,11 +155,14 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
     }
     private fun goToSecretActivity() {
         handler.postDelayed({
-            val intent = Intent(this, SecretActivity::class.java)
+            val intent = Intent(this, DetailsActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            intent.putExtra("correo",CorreoAux )
+            intent.putExtra("nombre", nombreAux )
+            intent.putExtra("id", idAux)
             finish() // Cierra la actividad actual
             startActivity(intent)
-        }, 4000)
+        }, 5000)
     }
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class) private fun processImageProxy(detector: FaceDetector, imageProxy: ImageProxy) {
@@ -178,15 +195,7 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun generateTempToken(seedToken: String): String {
-        val timestamp = System.currentTimeMillis() / 60000  // Obtiene la cantidad de minutos desde epoch
-        val mac = Mac.getInstance("HmacSHA256")
-        val secretKeySpec = SecretKeySpec(seedToken.toByteArray(), "HmacSHA256")
-        mac.init(secretKeySpec)
-        val hash = mac.doFinal(timestamp.toString().toByteArray())
-        return Base64.getEncoder().encodeToString(hash)
-    }
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("SuspiciousIndentation")
@@ -235,7 +244,6 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
 
             val base64Image = convertBitmapToBase64(faceBitmap)
 
-            //Para añadir la imagen
             if (current == 0 ){
                 tipoCara = "fotoPerfilDerecho"
             }
@@ -264,9 +272,6 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
                     val sendImageTask = SendImageToServerTask(jsonObject,this)
                     sendImageTask.execute()
 
-                    val jsonString = jsonObject.toString()
-                    Log.i("JSONObject", jsonString)
-
                 }
             }
 
@@ -278,11 +283,20 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
 
     class SendImageToServerTask(private val jsonObject: JSONObject,private val contexto: Context) : AsyncTask<Void, Void, String>() {
 
+        @RequiresApi(Build.VERSION_CODES.O)
         override fun doInBackground(vararg params: Void?): String {
-            val apiUrl = "https://camend-apis.icymoss-4d00a757.eastus.azurecontainerapps.io/registrar_rostro"
+            val apiUrl = "https://camend-apis.icymoss-4d00a757.eastus.azurecontainerapps.io/validar_rostro"
             Log.i("conexion", "0")
 
-
+            val storedSeedToken = getStoredSeedToken(contexto)
+            if (storedSeedToken != null) {
+                Log.i("conexion", "Token guardado ddd : $storedSeedToken")
+                val tempToken = generateTempToken(storedSeedToken)
+                jsonObject.put("token",tempToken)
+                Log.i("conexion", "Token generado dddd : $tempToken")
+                val jsonString = jsonObject.toString()
+                Log.i("conexion", jsonString)
+            }
             try {
                 Log.i("conexion", "URL")
 
@@ -309,30 +323,13 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
                     Log.i("conexion", responseBody)
 
                     val responseJson = JSONObject(responseBody)
-                    val token = responseJson.optString("token_semilla", "")
-                    val nombre = responseJson.optString("Nombres", "")
-                    val correo = responseJson.optString("Correo", "")
+                    val estado = responseJson.optString("Estado", "")
+                    val distancia = responseJson.optString("Distancia", "")
 
-                    // Utiliza el token según sea necesario
-                    Log.i("conexion", "Token from response: $token")
-                    Log.i("conexion", "Nombre from response: $nombre")
-                    Log.i("conexion", "Correo from response: $correo")
-
-
-                    if (token.isNotEmpty()) {
-                        saveSeedTokenToCache(contexto, token)
-                    }
-
-                    val storedSeedToken = getStoredSeedToken(contexto)
-                    if (storedSeedToken != null) {
-                        Log.i("conexion", "Token guardado: $storedSeedToken")
-                    }
-
-                    if ( token != "" && nombre != "" && correo != ""){
-                        add_BDatos (contexto,nombre,correo)
-                    }
-
+                    Log.i("conexion", "Estado : $estado")
+                    Log.i("conexion", "Distancia : $distancia")
                     return responseBody
+
                 } else {
                     Log.i("conexion", "Error en la operación de red. Código de respuesta: $responseCode")
 
@@ -370,16 +367,23 @@ class FaceDetectionValidarActivity : AppCompatActivity() {
             return sharedPreferences.getString("seedToken", null)
         }
 
+        @RequiresApi(Build.VERSION_CODES.O)
+        fun generateTempToken(seedToken: String): String {
+            val timestamp = System.currentTimeMillis() / 60000  // Obtiene la cantidad de minutos desde epoch
+            val mac = Mac.getInstance("HmacSHA256")
+            val secretKeySpec = SecretKeySpec(seedToken.toByteArray(), "HmacSHA256")
+            mac.init(secretKeySpec)
+            val hash = mac.doFinal(timestamp.toString().toByteArray())
+            return Base64.getEncoder().encodeToString(hash)
+        }
+
         override fun onPostExecute(result: String) {
+
             // Maneja el resultado aquí (actualización de la interfaz de usuario, etc.)
             // Este método se ejecuta en el hilo principal
-        }
+            Log.i("conexion", "se logro onpost $result")
 
-        private fun add_BDatos(context: Context, name: String, lastName: String) {
-            val dbHelper = MyDatabaseHelper(context)
-            dbHelper.addCuenta(name, lastName)
         }
-
 
     }
 
