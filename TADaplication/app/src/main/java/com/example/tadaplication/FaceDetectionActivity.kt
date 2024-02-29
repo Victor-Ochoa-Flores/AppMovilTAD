@@ -159,10 +159,12 @@ class FaceDetectionActivity : AppCompatActivity() {
 
                 if (isFaceInCorrectPosition(face, currentStep)) {
                     Log.i ("prueba","TOMA FOTO")
-                    Thread.sleep(300)
+
                     takePhoto(binding.graphicOverlay,face,imageProxy.image!!.cropRect,currentStep)
+                    Thread.sleep(300)
                     updateInstructionText()
                     Log.i ("prueba","DESPUES DE FOTO")
+
                 }
                 else{
                     //Log.i ("prueba","entra a else no coincide con conrrenStep")
@@ -192,6 +194,8 @@ class FaceDetectionActivity : AppCompatActivity() {
         try {
 
             val bitmap = binding.previewView.bitmap ?: return
+            Log.i("bitmappp", "antes del $bitmap")
+
             val scaleX = overlay.width.toFloat() / imageRect.height().toFloat()
             val scaleY = overlay.height.toFloat() / imageRect.width().toFloat()
             val scale = scaleX.coerceAtLeast(scaleY)
@@ -228,8 +232,13 @@ class FaceDetectionActivity : AppCompatActivity() {
                 (derecha - izquierda).toInt(),  // Ancho ajustado
                 (abajo - arriba).toInt()        // Altura ajustada
             )
-            saveImageToGallery(faceBitmap)
+            //saveImageToGallery(faceBitmap)
+            if (faceBitmap != null){
 
+            }
+            else{
+                Log.i("bitmappp", "bitmap vacio")
+            }
             val base64Image = convertBitmapToBase64(faceBitmap)
 
             //Para añadir la imagen
@@ -252,6 +261,7 @@ class FaceDetectionActivity : AppCompatActivity() {
                     put(base64Image.toString())
                 })
 
+                Thread.sleep(500)
 
                 if (tipoCara == "fotoPerfilDefrente") {
                     Log.i("conexion", "antes del SEND")
@@ -320,6 +330,7 @@ class FaceDetectionActivity : AppCompatActivity() {
                     if (token.isNotEmpty()) {
                         saveSeedTokenToCache(contexto, token)
                     }
+
 
                     val storedSeedToken = getStoredSeedToken(contexto)
                     if (storedSeedToken != null) {

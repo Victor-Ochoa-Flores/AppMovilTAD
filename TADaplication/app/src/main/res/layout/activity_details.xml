@@ -11,7 +11,7 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Nombre"
+        android:text="DATOS DE LA CUENTA"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -19,14 +19,16 @@
         android:id="@+id/textViewCorreo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
         android:text="Correo"
-        android:textSize="16sp" />
+        android:textSize="20sp" />
     <TextView
         android:id="@+id/textViewNombre"
         android:layout_width="wrap_content"
+        android:layout_marginTop="10dp"
         android:layout_height="wrap_content"
         android:text="Nombre"
-        android:textSize="16sp" />
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/buttonDelete"
@@ -34,6 +36,17 @@
         android:layout_height="wrap_content"
         android:text="Borrar Registro"
         android:layout_marginTop="16dp"
+        android:visibility="gone"
         android:backgroundTint="@color/celeste" />
+
+    <TextView
+        android:id="@+id/textViewNombre2"
+        android:layout_width="260dp"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:layout_marginTop="100dp"
+        android:text="Bienvenido a los detalles de la cuenta"
+
+        android:textSize="30sp" />
 
 </LinearLayout>
